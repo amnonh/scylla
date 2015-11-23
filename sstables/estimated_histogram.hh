@@ -126,7 +126,7 @@ public:
         if (low == bucket_offsets.end()) {
             low--;
         }
-        auto pos = low - bucket_offsets.begin();
+        auto pos = std::distance(low, bucket_offsets.begin());
         buckets.at(pos)++;
         _count++;
     }
@@ -146,7 +146,7 @@ public:
         if (low == bucket_offsets.end()) {
             low--;
         }
-        auto pos = low - bucket_offsets.begin();
+        auto pos = std::distance(low, bucket_offsets.begin());
         buckets.at(pos)+= new_count - _count;
         _count = new_count;
     }
