@@ -1495,9 +1495,13 @@ column_family::query(const query::read_command& cmd, const std::vector<query::pa
             return make_ready_future<lw_shared_ptr<query::result>>(
                     make_lw_shared<query::result>(qs.builder.build()));
         });
-    }).finally([lc, this]() mutable {
+    }).finally([lc, this, cmd]() mutable {
         _stats.reads.mark(lc);
         if (lc.is_start()) {
+            if (lc.latency_in_nano() > 1'000'000'000) {
+                std::cout << "column_family::query long latency " << lc.latency_in_nano() << " " << cmd << std::endl;
+            }
+
             _stats.estimated_read.add(lc.latency_in_nano(), _stats.reads.count);
         }
     });
