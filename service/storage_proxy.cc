@@ -2086,7 +2086,7 @@ storage_proxy::do_query(schema_ptr s,
             return query_singular(cmd, std::move(partition_ranges), cl).finally([lc, p] () mutable {
                     p->_stats.read.mark(lc.stop().latency_in_nano());
                     if (lc.is_start()) {
-                        p->_stats.estimated_read.add(lc.latency_in_nano(), p->_stats.read.count);
+                        p->_stats.estimated_read.add_nano(lc.latency_in_nano(), p->_stats.read.count);
                     }
             });
         } catch (const no_such_column_family&) {
