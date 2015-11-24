@@ -846,7 +846,7 @@ future<> storage_proxy::mutate_end(future<> mutate_result, utils::latency_counte
     assert(mutate_result.available());
     _stats.write.mark(lc.stop().latency_in_nano());
     if (lc.is_start()) {
-        _stats.estimated_write.add(lc.latency_in_nano(), _stats.write.count);
+        _stats.estimated_write.add_nano(lc.latency_in_nano(), _stats.write.count);
     }
     try {
         mutate_result.get();
