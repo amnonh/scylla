@@ -1502,7 +1502,7 @@ column_family::query(const query::read_command& cmd, const std::vector<query::pa
                 std::cout << "column_family::query long latency " << lc.latency_in_nano() << " " << cmd << std::endl;
             }
 
-            _stats.estimated_read.add(lc.latency_in_nano(), _stats.reads.count);
+            _stats.estimated_read.add_nano(lc.latency_in_nano(), _stats.reads.count);
         }
     });
 }
