@@ -136,9 +136,9 @@ public:
         uint64_t forwarded_mutations = 0;
         uint64_t forwarding_errors = 0;
 
-        utils::ihistogram read;
-        utils::ihistogram write;
-        utils::ihistogram range;
+        utils::api_timer read;
+        utils::api_timer write;
+        utils::api_timer range;
         sstables::estimated_histogram estimated_read;
         sstables::estimated_histogram estimated_write;
         sstables::estimated_histogram estimated_range;
