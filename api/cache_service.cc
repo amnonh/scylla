@@ -200,21 +200,25 @@ void set_cache_service(http_context& ctx, routes& r) {
     });
 
     cs::get_row_hits.set(r, [&ctx] (std::unique_ptr<request> req) {
-        return map_reduce_cf(ctx, 0, [](const column_family& cf) {
+        return map_reduce_cf_raw(ctx, utils::meter(), [](const column_family& cf) {
             return cf.get_row_cache().stats().hits;
-        }, std::plus<int64_t>());
+        }, add_meter).then([](const utils::meter& m) {
+            return make_ready_future<json::json_return_type>(meter_to_json(m));
+        });
     });
 
     cs::get_row_requests.set(r, [&ctx] (std::unique_ptr<request> req) {
-        return map_reduce_cf(ctx, 0, [](const column_family& cf) {
-            return cf.get_row_cache().stats().hits + cf.get_row_cache().stats().misses;
-        }, std::plus<int64_t>());
+        return map_reduce_cf_raw(ctx, utils::meter(), [](const column_family& cf) {
+            return add_meter(cf.get_row_cache().stats().hits , cf.get_row_cache().stats().misses);
+        }, add_meter).then([](const utils::meter& m) {
+            return make_ready_future<json::json_return_type>(meter_to_json(m));
+        });
     });
 
     cs::get_row_hit_rate.set(r, [&ctx] (std::unique_ptr<request> req) {
         return map_reduce_cf(ctx, ratio_holder(), [](const column_family& cf) {
-            return ratio_holder(cf.get_row_cache().stats().hits + cf.get_row_cache().stats().misses,
-                    cf.get_row_cache().stats().hits);
+            return ratio_holder(cf.get_row_cache().stats().hits.count + cf.get_row_cache().stats().misses.count,
+                    cf.get_row_cache().stats().hits.count);
         }, std::plus<ratio_holder>());
     });
 

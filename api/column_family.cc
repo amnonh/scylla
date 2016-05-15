@@ -77,14 +77,14 @@ future<json::json_return_type>  get_cf_stats(http_context& ctx,
 }
 
 static future<json::json_return_type>  get_cf_stats_count(http_context& ctx, const sstring& name,
-        utils::ihistogram column_family::stats::*f) {
+        utils::api_timer column_family::stats::*f) {
     return map_reduce_cf(ctx, name, int64_t(0), [f](const column_family& cf) {
-        return (cf.get_stats().*f).count;
+        return (cf.get_stats().*f).hist.count;
     }, std::plus<int64_t>());
 }
 
 static future<json::json_return_type>  get_cf_stats_sum(http_context& ctx, const sstring& name,
-        utils::ihistogram column_family::stats::*f) {
+        utils::api_timer column_family::stats::*f) {
     auto uuid = get_uuid(name, ctx.db.local());
     return ctx.db.map_reduce0([uuid, f](database& db) {
         // Histograms information is sample of the actual load
@@ -92,7 +92,7 @@ static future<json::json_return_type>  get_cf_stats_sum(http_context& ctx, const
         // with count. The information is gather in nano second,
         // but reported in micro
         column_family& cf = db.find_column_family(uuid);
-        return ((cf.get_stats().*f).count/1000.0) * (cf.get_stats().*f).mean;
+        return ((cf.get_stats().*f).hist.count/1000.0) * (cf.get_stats().*f).hist.mean;
     }, 0.0, std::plus<double>()).then([](double res) {
         return make_ready_future<json::json_return_type>((int64_t)res);
     });
@@ -100,34 +100,35 @@ static future<json::json_return_type>  get_cf_stats_sum(http_context& ctx, const
 
 
 static future<json::json_return_type>  get_cf_stats_count(http_context& ctx,
-        utils::ihistogram column_family::stats::*f) {
+        utils::api_timer column_family::stats::*f) {
     return map_reduce_cf(ctx, int64_t(0), [f](const column_family& cf) {
-        return (cf.get_stats().*f).count;
+        return (cf.get_stats().*f).hist.count;
     }, std::plus<int64_t>());
 }
 
 static future<json::json_return_type>  get_cf_histogram(http_context& ctx, const sstring& name,
-        utils::ihistogram column_family::stats::*f) {
+        utils::api_timer column_family::stats::*f) {
     utils::UUID uuid = get_uuid(name, ctx.db.local());
-    return ctx.db.map_reduce0([f, uuid](const database& p) {return p.find_column_family(uuid).get_stats().*f;},
-            utils::ihistogram(),
-            add_histogram)
-            .then([](const utils::ihistogram& val) {
-                return make_ready_future<json::json_return_type>(to_json(val));
+    return ctx.db.map_reduce0([f, uuid](const database& p) {
+        return p.find_column_family(uuid).get_stats().*f;},
+            utils::api_timer(),
+            add_timer)
+            .then([](const utils::api_timer& val) {
+                return make_ready_future<json::json_return_type>(timer_to_json(val));
     });
 }
 
-static future<json::json_return_type> get_cf_histogram(http_context& ctx, utils::ihistogram column_family::stats::*f) {
-    std::function<utils::ihistogram(const database&)> fun = [f] (const database& db)  {
-        utils::ihistogram res;
+static future<json::json_return_type> get_cf_histogram(http_context& ctx, utils::api_timer column_family::stats::*f) {
+    std::function<utils::api_timer(const database&)> fun = [f] (const database& db)  {
+        utils::api_timer res;
         for (auto i : db.get_column_families()) {
-            res = add_histogram(res, i.second->get_stats().*f);
+            res = add_timer(res, i.second->get_stats().*f);
         }
         return res;
     };
-    return ctx.db.map(fun).then([](const std::vector<utils::ihistogram> &res) {
-        std::vector<httpd::utils_json::histogram> r;
-        boost::copy(res | boost::adaptors::transformed(to_json), std::back_inserter(r));
+    return ctx.db.map(fun).then([](const std::vector<utils::api_timer> &res) {
+        std::vector<httpd::utils_json::api_timer> r;
+        boost::copy(res | boost::adaptors::transformed(timer_to_json), std::back_inserter(r));
         return make_ready_future<json::json_return_type>(r);
     });
 }
@@ -652,27 +653,35 @@ void set_column_family(http_context& ctx, routes& r) {
     });
 
     cf::get_row_cache_hit.set(r, [&ctx] (std::unique_ptr<request> req) {
-        return map_reduce_cf(ctx, req->param["name"], int64_t(0), [](const column_family& cf) {
+        return map_reduce_cf_raw(ctx, req->param["name"], utils::meter(), [](const column_family& cf) {
             return cf.get_row_cache().stats().hits;
-        }, std::plus<int64_t>());
+        }, add_meter).then([](const utils::meter& m) {
+            return make_ready_future<json::json_return_type>(meter_to_json(m));
+        });
     });
 
     cf::get_all_row_cache_hit.set(r, [&ctx] (std::unique_ptr<request> req) {
-        return map_reduce_cf(ctx, int64_t(0), [](const column_family& cf) {
+        return map_reduce_cf_raw(ctx, utils::meter(), [](const column_family& cf) {
             return cf.get_row_cache().stats().hits;
-        }, std::plus<int64_t>());
+        }, add_meter).then([](const utils::meter& m) {
+            return make_ready_future<json::json_return_type>(meter_to_json(m));
+        });
     });
 
     cf::get_row_cache_miss.set(r, [&ctx] (std::unique_ptr<request> req) {
-        return map_reduce_cf(ctx, req->param["name"], int64_t(0), [](const column_family& cf) {
+        return map_reduce_cf_raw(ctx, req->param["name"], utils::meter(), [](const column_family& cf) {
             return cf.get_row_cache().stats().misses;
-        }, std::plus<int64_t>());
+        }, add_meter).then([](const utils::meter& m) {
+            return make_ready_future<json::json_return_type>(meter_to_json(m));
+        });
     });
 
     cf::get_all_row_cache_miss.set(r, [&ctx] (std::unique_ptr<request> req) {
-        return map_reduce_cf(ctx, int64_t(0), [](const column_family& cf) {
+        return map_reduce_cf_raw(ctx, utils::meter(), [](const column_family& cf) {
             return cf.get_row_cache().stats().misses;
-        }, std::plus<int64_t>());
+        }, add_meter).then([](const utils::meter& m) {
+            return make_ready_future<json::json_return_type>(meter_to_json(m));
+        });
 
     });
 
