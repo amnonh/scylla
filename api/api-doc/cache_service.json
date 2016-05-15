@@ -448,7 +448,7 @@
         {
           "method": "GET",
           "summary": "Get row hits",
-          "type": "long",
+          "type": "#/utils/api_meter",
           "nickname": "get_row_hits",
           "produces": [
             "application/json"
@@ -463,7 +463,7 @@
         {
           "method": "GET",
           "summary": "Get row requests",
-          "type": "long",
+          "type": "#/utils/api_meter",
           "nickname": "get_row_requests",
           "produces": [
             "application/json"
@@ -478,7 +478,7 @@
         {
           "method": "GET",
           "summary": "Get row hit rate",
-          "type": "double",
+          "type": "#/utils/api_meter",
           "nickname": "get_row_hit_rate",
           "produces": [
             "application/json"

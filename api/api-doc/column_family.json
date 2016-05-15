@@ -1093,7 +1093,7 @@
             {
                "method":"GET",
                "summary":"Get read latency histogram",
-               "$ref": "#/utils/histogram",
+               "$ref": "#/utils/api_timer",
                "nickname":"get_read_latency_histogram",
                "produces":[
                   "application/json"
@@ -1119,7 +1119,7 @@
                "summary":"Get read latency histogram from all column family",
                "type":"array",
                "items":{
-                  "$ref": "#/utils/histogram"
+                  "$ref": "#/utils/api_timer"
                },
                "nickname":"get_all_read_latency_histogram",
                "produces":[
@@ -1259,7 +1259,7 @@
             {
                "method":"GET",
                "summary":"Get write latency histogram",
-               "$ref": "#/utils/histogram",
+               "$ref": "#/utils/api_timer",
                "nickname":"get_write_latency_histogram",
                "produces":[
                   "application/json"
@@ -1285,7 +1285,7 @@
                "summary":"Get write latency histogram of all column family",
                "type":"array",
                "items":{
-                  "$ref": "#/utils/histogram"
+                  "$ref": "#/utils/api_timer"
                },
                "nickname":"get_all_write_latency_histogram",
                "produces":[
