@@ -23,8 +23,50 @@
 
 #include <boost/circular_buffer.hpp>
 #include "latency.hh"
-
+#include <cmath>
+#include "core/timer.hh"
+#include <iostream>
 namespace utils {
+/**
+ * An exponentially-weighted moving average.
+ */
+class ewma {
+    double _alpha = 0;
+    double _interval_in_ns = 0;
+    bool _initialized = false;
+    uint64_t _count = 0;
+    uint64_t _tick_duration_in_ns;
+public:
+    double rate = 0;
+    ewma(latency_counter::duration interval, latency_counter::duration tick_duration) :
+        _interval_in_ns(std::chrono::duration_cast<std::chrono::nanoseconds>(interval).count()),
+        _tick_duration_in_ns(std::chrono::duration_cast<std::chrono::nanoseconds>(tick_duration).count()) {
+        _alpha = 1 - std::exp(-_interval_in_ns/_tick_duration_in_ns);
+    }
+
+    void add(uint64_t val = 1) {
+        _count += val;
+    }
+
+    void update() {
+        double instant_rate = _count / _interval_in_ns;
+        if (_initialized) {
+            rate += (_alpha * (instant_rate - rate));
+        } else {
+            rate = instant_rate;
+            _initialized = true;
+        }
+        _count = 0;
+    }
+
+    bool is_initilized() const {
+        return _initialized;
+    }
+
+    double rate_in_nano() const {
+        return rate;
+    }
+};
 
 class ihistogram {
 public:
@@ -107,6 +149,90 @@ public:
 
     int64_t pending() const {
         return started - count;
+    }
+};
+
+class meter {
+public:
+    static constexpr latency_counter::duration DURATION = std::chrono::seconds(10);
+
+    uint64_t count = 0;
+    ewma rates[3] = {{DURATION, std::chrono::minutes(1)}, {DURATION, std::chrono::minutes(5)}, {DURATION, std::chrono::minutes(15)}};
+    latency_counter::time_point start_time;
+    timer<> _timer;
+
+    void set_timer() {
+        _timer.set_callback([this] {
+            update();
+        });
+        _timer.arm_periodic(DURATION);
+    }
+    meter() : start_time(latency_counter::now()) {
+        set_timer();
+    }
+
+    meter(const meter& m) {
+        *this = m;
+    }
+    meter(meter&&) = default;
+    void mark(uint64_t n = 1) {
+        count += n;
+        for (int i = 0; i < 3; i++) {
+            rates[i].add(n);
+        }
+    }
+
+    double mean_rate_in_ms() const{
+        if (count == 0) {
+            return 0.0;
+        }
+        double elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(latency_counter::now() - start_time).count();
+        return (count / elapsed);
+    }
+
+    void update() {
+        for (int i = 0; i < 3; i++) {
+            rates[i].update();
+        }
+    }
+
+    meter& operator=(const meter& m) {
+        count = m.count;
+        start_time = m.start_time;
+        for (int i=0; i<3; i++) {
+            rates[i] = m.rates[i];
+        }
+        return *this;
+    }
+};
+
+/**
+ * A timer metric which aggregates timing durations and provides duration statistics, plus
+ * throughput statistics via meter
+ */
+class api_timer {
+public:
+    ihistogram hist;
+    meter met;
+    api_timer() = default;
+    api_timer(api_timer&&) = default;
+    api_timer(const api_timer&) = default;
+    api_timer(size_t size, int64_t _sample_mask = 0x80) : hist(size, _sample_mask) {}
+    api_timer& operator=(const api_timer&) = default;
+    void mark(int duration) {
+        if (duration >= 0) {
+            hist.mark(duration);
+            met.mark();
+        }
+    }
+
+    void mark(latency_counter& lc) {
+        hist.mark(lc);
+        met.mark();
+    }
+
+    void set_latency(latency_counter& lc) {
+        hist.set_latency(lc);
     }
 };
 
