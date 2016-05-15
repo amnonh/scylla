@@ -149,10 +149,52 @@ inline utils::ihistogram add_histogram(utils::ihistogram res,
     return res;
 }
 
+inline utils::meter add_meter(utils::meter res,
+        const utils::meter& val) {
+    if (res.count == 0) {
+        return val;
+    }
+    for (uint32_t i=0; i< 3; i++) {
+        res.rates[i].rate += val.rates[i].rate;
+    }
+    auto ncount = res.count + val.count;
+    res.count = ncount;
+    return res;
+}
+
+inline utils::api_timer add_timer(utils::api_timer res,
+        const utils::api_timer& val) {
+    res.hist = add_histogram(res.hist, val.hist);
+    res.met = add_meter(res.met, val.met);
+    return res;
+}
+
 inline
 httpd::utils_json::histogram to_json(const utils::ihistogram& val) {
     httpd::utils_json::histogram h;
     h = val;
+    return h;
+}
+
+inline
+httpd::utils_json::api_meter meter_to_json(const utils::meter& val) {
+    httpd::utils_json::api_meter m;
+    m.count = val.count;
+    m.mean = val.mean_rate_in_ms();
+    std::cout<< "meter_to_json" << m.count() << " " << m.mean();
+    for (int i=0; i< 3; i++) {
+        m.rates.push((val.rates[i].is_initilized())? val.rates[i].rate_in_nano() : 0);
+        std::cout << " " << m.rates._elements[i];
+    }
+    std::cout << std::endl;
+    return m;
+}
+
+inline
+httpd::utils_json::api_timer timer_to_json(const utils::api_timer& val) {
+    httpd::utils_json::api_timer h;
+    h.hist = val.hist;
+    h.meter = meter_to_json(val.met);
     return h;
 }
 
@@ -162,6 +204,15 @@ future<json::json_return_type>  sum_histogram_stats(distributed<T>& d, utils::ih
     return d.map_reduce0([f](const T& p) {return p.get_stats().*f;}, utils::ihistogram(),
             add_histogram).then([](const utils::ihistogram& val) {
         return make_ready_future<json::json_return_type>(to_json(val));
+    });
+}
+
+template<class T, class F>
+future<json::json_return_type>  sum_timer_stats(distributed<T>& d, utils::api_timer F::*f) {
+
+    return d.map_reduce0([f](const T& p) {return p.get_stats().*f;}, utils::api_timer(),
+            add_timer).then([](const utils::api_timer& val) {
+        return make_ready_future<json::json_return_type>(timer_to_json(val));
     });
 }
 
