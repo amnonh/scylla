@@ -26,6 +26,8 @@
 #include <cmath>
 #include "core/timer.hh"
 #include <iostream>
+#include "db/config.hh"
+
 namespace utils {
 /**
  * An exponentially-weighted moving average.
@@ -84,10 +86,13 @@ public:
     double variance;
     int64_t sample_mask;
     boost::circular_buffer<int64_t> sample;
-    ihistogram(size_t size = 1024, int64_t _sample_mask = 0x80)
+    ihistogram(size_t size = 1024, int64_t _sample_mask = 0)
             : count(0), total(0), min(0), max(0), sum(0), started(0), mean(0), variance(0),
               sample_mask(_sample_mask), sample(
                     size) {
+        if (_sample_mask == 0) {
+            _sample_mask = db::config().histogram_mask;
+        }
     }
     void mark(int64_t value) {
         if (total == 0 || value < min) {
@@ -291,7 +296,7 @@ public:
     timed_rate_moving_average_and_histogram() = default;
     timed_rate_moving_average_and_histogram(timed_rate_moving_average_and_histogram&&) = default;
     timed_rate_moving_average_and_histogram(const timed_rate_moving_average_and_histogram&) = default;
-    timed_rate_moving_average_and_histogram(size_t size, int64_t _sample_mask = 0x80) : hist(size, _sample_mask) {}
+    timed_rate_moving_average_and_histogram(size_t size, int64_t _sample_mask = -1) : hist(size, _sample_mask) {}
     timed_rate_moving_average_and_histogram& operator=(const timed_rate_moving_average_and_histogram&) = default;
     void mark(int duration) {
         if (duration >= 0) {
