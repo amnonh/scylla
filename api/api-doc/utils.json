@@ -43,6 +43,10 @@
                   "type":"long"
                },
                "description":"A sample containing the last n elements"
+            },
+            "total":{
+               "type":"long",
+               "description":"The number of sampled"
             }
          }
       },

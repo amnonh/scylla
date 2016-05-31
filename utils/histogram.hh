@@ -91,7 +91,7 @@ public:
               sample_mask(_sample_mask), sample(
                     size) {
         if (_sample_mask == 0) {
-            _sample_mask = db::config().histogram_mask;
+            _sample_mask = db::config().histogram_mask();
         }
     }
     void mark(int64_t value) {
