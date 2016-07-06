@@ -1,0 +1,12 @@
+[Unit]
+Description=Scylla Help
+
+[Service]
+Type=simple
+EnvironmentFile=@@SYSCONFDIR@@/scylla-help.py
+User=scylla
+Group=scylla
+ExecStart=/usr/lib/scylla/scylla-help.py -q version
+
+[Install]
+WantedBy=multi-user.target
