@@ -84,7 +84,7 @@ install -m755 seastar/dpdk/tools/dpdk_nic_bind.py $RPM_BUILD_ROOT%{_prefix}/lib/
 install -m755 build/release/scylla $RPM_BUILD_ROOT%{_bindir}
 install -m755 build/release/iotune $RPM_BUILD_ROOT%{_bindir}
 install -m755 dist/common/bin/scyllatop $RPM_BUILD_ROOT%{_bindir}
-install -m755 dist/common/bin/scylla-help.py $RPM_BUILD_ROOT%{_prefix}/lib/scylla/
+install -m755 scylla-help.py $RPM_BUILD_ROOT%{_prefix}/lib/scylla/
 install -d -m755 $RPM_BUILD_ROOT%{_docdir}/scylla
 install -m644 README.md $RPM_BUILD_ROOT%{_docdir}/scylla/
 install -m644 README-DPDK.md $RPM_BUILD_ROOT%{_docdir}/scylla/
