@@ -6,7 +6,7 @@ stop on stopping scylla-server
 script
   while [ 1 ]
   do
-    /lib/scylla/scylla-housekeeping -q version || true
+    /usr/lib/scylla/scylla-housekeeping -q version || true
     sleep 1m
   done
 end script
