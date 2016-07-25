@@ -55,8 +55,7 @@ def get_api(path):
 
 def check_version(ar):
     current_version = get_api('/storage_service/scylla_release_version')
-    latest_version = get_json_from_url(version_url)["version"]
-    
+    latest_version = get_json_from_url(version_url + '?version=' + current_version)["version"]
     if current_version != latest_version:
         traceln("A new version was found, current version=", current_version, " latest version=", latest_version)
 
