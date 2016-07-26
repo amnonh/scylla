@@ -23,7 +23,6 @@
 import argparse
 import json
 import urllib
-import requests
 
 VERSION = "1.0"
 quiet = False
