@@ -205,7 +205,7 @@ fi
 if [ $INTERACTIVE -eq 1 ]; then
     interactive_ask_service "Do you want to enable ScyllaDB services?" "Answer yes to automatically start Scylla when the node boots; answer no to skip this step." "yes" &&:
     ENABLE_SERVICE=$?
-    if [ $ENABLE_SERVICE -eq 1 ]; then
+    if [ $ENABLE_SERVICE -eq 1 ] && [ ! -f /etc/scylla.d/housekeeping.conf ]; then
         interactive_ask_service "Do you want to enable ScyllaDB version check?" "Answer yes to automatically start Scylla-housekeeping that check for newer version, when the node boots; answer no to skip this step." "yes" &&:
         ENABLE_CHECK_VERSION=$?
     fi
@@ -217,8 +217,15 @@ if [ $ENABLE_SERVICE -eq 1 ]; then
         systemctl enable collectd.service
         if [ $ENABLE_CHECK_VERSION -eq 1 ]; then
             systemctl unmask scylla-housekeeping.timer
+            if [ ! -f /etc/scylla.d/housekeeping.conf ]; then
+               printf "[housekeeping]\ncheck-version: True\n" > /etc/scylla.d/housekeeping.conf
+            fi
         else
             systemctl mask scylla-housekeeping.timer
+            systemctl stop scylla-housekeeping.timer || true
+            if [ ! -f /etc/scylla.d/housekeeping.conf ]; then
+               printf "[housekeeping]\ncheck-version: False\n" > /etc/scylla.d/housekeeping.conf
+            fi
         fi
     fi
 fi
