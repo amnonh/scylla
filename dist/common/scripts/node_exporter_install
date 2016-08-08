@@ -1,0 +1,41 @@
+#!/bin/sh
+#
+#  Copyright (C) 2015 ScyllaDB
+
+if [ "`id -u`" -ne 0 ]; then
+    echo "Requires root permission."
+    exit 1
+fi
+
+if [ -f /usr/bin/node_exporter ]; then
+    echo "node_exporter already installed"
+    exit 1
+fi
+
+VERSION=0.12.0
+dir=/usr/lib/scylla/Prometheus/node_exporter
+mkdir -p $dir
+cd $dir
+wget https://github.com/prometheus/node_exporter/releases/download/$VERSION/node_exporter-$VERSION.linux-amd64.tar.gz -O $dir/node_exporter-$VERSION.linux-amd64.tar.gz
+tar -xvzf $dir/node_exporter-$VERSION.linux-amd64.tar.gz
+rm $dir/node_exporter-$VERSION.linux-amd64.tar.gz
+ln -s $dir/node_exporter-$VERSION.linux-amd64/node_exporter /usr/bin
+. /etc/os-release
+
+if [ "$ID" = "ubuntu" ]; then
+    cat <<EOT >> /etc/init/node_exporter.conf
+# Run node_exporter
+
+start on startup
+
+script
+   /usr/bin/node_exporter
+end script
+EOT
+    service node_exporter start
+else
+    systemctl status node-exporter
+fi
+
+
+printf "node_exporter successfully installed\n"
