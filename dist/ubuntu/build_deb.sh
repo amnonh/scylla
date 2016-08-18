@@ -98,6 +98,10 @@ else
 fi
 
 cp dist/common/systemd/scylla-server.service.in debian/scylla-server.service
+if [ "$RELEASE" != "14.04" ]; then
+  cp dist/common/systemd/scylla-housekeeping.service.in debian/scylla-housekeeping.service
+  cp dist/common/systemd/scylla-housekeeping.timer.in debian/scylla-housekeeping.timer
+fi
 sed -i -e "s#@@SYSCONFDIR@@#/etc/default#g" debian/scylla-server.service
 
 if [ "$RELEASE" = "14.04" ] && [ $REBUILD -eq 0 ]; then
