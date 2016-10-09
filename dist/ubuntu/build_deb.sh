@@ -86,7 +86,7 @@ else
     sed -i -e "s/@@COMPILER@@/g++/g" debian/rules
     sed -i -e "s/@@BUILD_DEPENDS@@/libsystemd-dev, g++, libunwind-dev/g" debian/control
     sed -i -e "s#@@INSTALL@@##g" debian/scylla-server.install
-    sed -i -e "s#@@HKDOTTIMER@@#dist/common/systemd/scylla-housekeeping.timer /lib/systemd/system#g" debian/scylla-server.install
+    sed -i -e $"s#@@HKDOTTIMER@@#dist/common/systemd/scylla-housekeeping.timer /lib/systemd/system\\ndist/common/systemd/node-exporter.service /lib/systemd/system#g" debian/scylla-server.install
 fi
 if [ $DIST -gt 0 ]; then
     sed -i -e "s#@@ADDHKCFG@@#conf/housekeeping.cfg etc/scylla.d/#g" debian/scylla-server.install
@@ -102,6 +102,7 @@ fi
 cp dist/common/systemd/scylla-server.service.in debian/scylla-server.service
 sed -i -e "s#@@SYSCONFDIR@@#/etc/default#g" debian/scylla-server.service
 cp dist/common/systemd/scylla-housekeeping.service debian/scylla-server.scylla-housekeeping.service
+cp dist/common/systemd/node-exporter.service debian/scylla-server.node-exporter.service
 
 if [ "$RELEASE" = "14.04" ] && [ $REBUILD -eq 0 ]; then
     if [ ! -f /etc/apt/sources.list.d/scylla-3rdparty-trusty.list ]; then
