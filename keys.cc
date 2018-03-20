@@ -24,6 +24,8 @@
 #include "keys.hh"
 #include "dht/i_partitioner.hh"
 #include "clustering_bounds_comparator.hh"
+#include <boost/algorithm/string.hpp>
+#include <boost/any.hpp>
 
 std::ostream& operator<<(std::ostream& out, const partition_key& pk) {
     return out << "pk{" << to_hex(pk) << "}";
@@ -55,6 +57,31 @@ partition_key_view::ring_order_tri_compare(const schema& s, partition_key_view k
         return t1 < t2 ? -1 : 1;
     }
     return legacy_tri_compare(s, k2);
+}
+
+
+partition_key partition_key::from_string(const schema_ptr s, const sstring& key) {
+    std::vector<sstring> vec;
+    boost::split(vec, key, boost::is_any_of(":"));
+
+    if (vec.size() == 1) {
+        return partition_key::from_single_value(*s, key.c_str());
+    }
+
+    auto it = std::begin(vec);
+    auto e = std::end(vec);
+
+    // drop the reference to be able to feed it to boost::adaptors::transformed
+    auto range =  s->partition_key_type()->types() | boost::adaptors::transformed([&it, &e, &key] (data_type t) {
+        if (it == e) {
+            throw std::invalid_argument("partition key '" + key + "' missing component");
+        }
+        return t->from_string(*it++);
+    });
+    if (it != e) {
+        throw std::invalid_argument("partition key '" + key + "' has too many components");
+    }
+    return partition_key::from_range(range);
 }
 
 std::ostream& operator<<(std::ostream& out, const bound_kind k) {

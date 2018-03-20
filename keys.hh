@@ -643,6 +643,13 @@ public:
         return partition_key(managed_bytes(c_type::serialize_value(std::forward<RangeOfSerializedComponents>(v))));
     }
 
+    /*!
+     * \brief create a partition_key from string
+     * takes a key that is represented as string and return a partition_key
+     * object
+     */
+    static partition_key from_string(const schema_ptr s, const sstring& key);
+
     partition_key(std::vector<bytes> v)
         : compound_wrapper(managed_bytes(c_type::serialize_value(std::move(v))))
     { }
