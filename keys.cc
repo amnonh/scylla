@@ -65,23 +65,32 @@ partition_key partition_key::from_string(const schema_ptr s, const sstring& key)
     boost::split(vec, key, boost::is_any_of(":"));
 
     if (vec.size() == 1) {
-        return partition_key::from_single_value(*s, key.c_str());
+        //return partition_key::from_single_value(*s, (*s->partition_key_type()->types().begin())->from_string(key));
     }
-
+    //s->partition_key_type()->types().begin()->from_string(key);
     auto it = std::begin(vec);
-    auto e = std::end(vec);
-
+//    auto e = std::end(vec);
+    std::cout << vec.size() << std::endl;
     // drop the reference to be able to feed it to boost::adaptors::transformed
+    if (vec.size() != s->partition_key_type()->types().size()) {
+        throw std::invalid_argument("partition key '" + key + "' has too many components");
+    }
+    std::cout << vec.size() <<  s->partition_key_type()->types().size() << std::endl;
+    /*
     auto range =  s->partition_key_type()->types() | boost::adaptors::transformed([&it, &e, &key] (data_type t) {
         if (it == e) {
             throw std::invalid_argument("partition key '" + key + "' missing component");
         }
+        std::cout << *it << std::endl;
         return t->from_string(*it++);
     });
-    if (it != e) {
-        throw std::invalid_argument("partition key '" + key + "' has too many components");
+    */
+    std::vector<bytes> r;
+    r.resize(vec.size());
+    for (auto t : s->partition_key_type()->types()) {
+        r.emplace_back(t->from_string(*it++));
     }
-    return partition_key::from_range(range);
+    return partition_key::from_range(std::move(r));
 }
 
 std::ostream& operator<<(std::ostream& out, const bound_kind k) {

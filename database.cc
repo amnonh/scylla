@@ -42,6 +42,7 @@
 #include "sstables/sstables.hh"
 #include "sstables/compaction.hh"
 #include "sstables/remove.hh"
+#include "sstables/index_reader.hh"
 #include <boost/range/adaptor/transformed.hpp>
 #include <boost/range/adaptor/map.hpp>
 #include "locator/simple_snitch.hh"
@@ -1556,6 +1557,38 @@ int64_t column_family::get_unleveled_sstables() const {
     // SSTables in L0. If leveled compaction is enabled in this column family,
     // then we should return zero, as we currently do.
     return 0;
+}
+
+future<std::set<sstring>> column_family::get_sstables_by_key(const sstring& key) const {
+    auto pk = partition_key::from_string(_schema, key);
+
+    return do_with(std::set<sstring>(), std::make_unique<sstables::shared_index_lists>(), lw_shared_ptr<sstables::sstable_set::incremental_selector>(make_lw_shared(get_sstable_set().make_incremental_selector())),
+            dht::decorated_key(dht::global_partitioner().decorate_key(*_schema, pk)),
+            [this, pk = std::move(pk)] (std::set<sstring>& filenames, std::unique_ptr<sstables::shared_index_lists>& index_list_ptr, lw_shared_ptr<sstables::sstable_set::incremental_selector>& sel, dht::decorated_key& dk) {
+        auto& sst = sel->select(dk.token()).sstables;
+        std::cout << "family::get_sstables_by_key " + to_sstring(engine().cpu_id())+ " " << pk << std::endl;
+        if (sst.empty()) {
+            return make_ready_future<std::set<sstring>>();
+        }
+
+
+        auto hk = sstables::sstable::make_hashed_key(*_schema, dk.key());
+        //sstables::shared_index_lists& index_lists = *index_list_ptr.get();
+
+        return do_for_each(sst, [this, &filenames, &dk, hk = std::move(hk), &index_list_ptr] (auto s) mutable {
+            auto name = s->get_filename();
+            std::cout << "about to check " << engine().cpu_id() <<  name << " " << (int)dk._token._kind << " " << &dk._token << std::endl;
+            return sstables::sstable::has_partition_key(s, hk, dk, *index_list_ptr.get()).then([name = std::move(name), &filenames] (bool contains) mutable {
+                std::cout << "get_sstable_by_key " << contains << std::endl;
+                if (contains) {
+                    filenames.insert(name);
+                }
+            });
+        }).then([&filenames] {
+            return make_ready_future<std::set<sstring>>(filenames);
+        });
+        std::cout << "done do_for_each"<< engine().cpu_id() <<  std::endl;
+    });
 }
 
 const sstables::sstable_set& column_family::get_sstable_set() const {

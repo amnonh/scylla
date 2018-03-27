@@ -64,6 +64,7 @@ namespace sstables {
 extern logging::logger sstlog;
 
 class data_consume_rows_context;
+class shared_index_lists;
 
 // data_consume_context is an object returned by sstable::data_consume_rows()
 // which allows knowing when the consumer stops reading, and starting it again
@@ -671,6 +672,19 @@ public:
     bool filter_has_key(const key& key) {
         return _components->filter->is_present(bytes_view(key));
     }
+
+    /*!
+     * \brief check if the sstable contains the given key.
+     * The method would search that the key is actually
+     * found in the sstable not just in the filter.
+     *
+     * It is a static method because the index reader needs a shared_sstable,
+     * this save creating a shared_sstable for each call of this method.
+     *
+     * The caller needs to create and hold shared_index_lists for life of the method call,
+     * it is used by the index reader.
+     */
+    static future<bool> has_partition_key(shared_sstable s, const utils::hashed_key& hk, const dht::decorated_key& dk, shared_index_lists& index_lists);
 
     bool filter_has_key(utils::hashed_key key) {
         return _components->filter->is_present(key);
