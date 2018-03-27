@@ -905,5 +905,18 @@ void set_column_family(http_context& ctx, routes& r) {
             return make_ready_future<json::json_return_type>(res);
         });
     });
+
+    cf::get_sstables_for_key.set(r, [&ctx](std::unique_ptr<request> req) {
+        auto key = req->get_query_param("key");
+        return map_reduce_cf_raw(ctx, req->param["name"], std::set<sstring>(), [key](const column_family& cf) {
+           return cf.get_sstables_by_key(key);
+           // return std::vector<sstring>();
+        }, [](std::set<sstring> a, std::set<sstring>&& b) mutable {
+            a.insert(b.begin(),b.end());
+            return a;
+        }).then([](const std::set<sstring>& res) {
+            return make_ready_future<json::json_return_type>(container_to_vec(res));
+        });
+    });
 }
 }
