@@ -1562,11 +1562,11 @@ int64_t column_family::get_unleveled_sstables() const {
 future<std::set<sstring>> column_family::get_sstables_by_key(const sstring& key) const {
     auto pk = partition_key::from_string(_schema, key);
 
-    return do_with(std::set<sstring>(), std::make_unique<sstables::shared_index_lists>(), lw_shared_ptr<sstables::sstable_set::incremental_selector>(make_lw_shared(get_sstable_set().make_incremental_selector())),
+    return do_with(std::set<sstring>(), lw_shared_ptr<sstables::sstable_set::incremental_selector>(make_lw_shared(get_sstable_set().make_incremental_selector())),
             dht::decorated_key(dht::global_partitioner().decorate_key(*_schema, pk)),
-            [this, pk = std::move(pk)] (std::set<sstring>& filenames, std::unique_ptr<sstables::shared_index_lists>& index_list_ptr, lw_shared_ptr<sstables::sstable_set::incremental_selector>& sel, dht::decorated_key& dk) {
+            [this, pk = std::move(pk)] (std::set<sstring>& filenames, lw_shared_ptr<sstables::sstable_set::incremental_selector>& sel, dht::decorated_key& dk) {
         auto& sst = sel->select(dk.token()).sstables;
-        std::cout << "family::get_sstables_by_key " + to_sstring(engine().cpu_id())+ " " << pk << std::endl;
+        std::cout << "family::get_sstables_by_key " + to_sstring(engine().cpu_id())+ " " << pk << " " << sst.size()<< std::endl;
         if (sst.empty()) {
             return make_ready_future<std::set<sstring>>();
         }
@@ -1575,10 +1575,10 @@ future<std::set<sstring>> column_family::get_sstables_by_key(const sstring& key)
         auto hk = sstables::sstable::make_hashed_key(*_schema, dk.key());
         //sstables::shared_index_lists& index_lists = *index_list_ptr.get();
 
-        return do_for_each(sst, [this, &filenames, &dk, hk = std::move(hk), &index_list_ptr] (auto s) mutable {
+        return do_for_each(sst, [this, &filenames, &dk, hk = std::move(hk)] (auto s) mutable {
             auto name = s->get_filename();
             std::cout << "about to check " << engine().cpu_id() <<  name << " " << (int)dk._token._kind << " " << &dk._token << std::endl;
-            return sstables::sstable::has_partition_key(s, hk, dk, *index_list_ptr.get()).then([name = std::move(name), &filenames] (bool contains) mutable {
+            return sstables::sstable::has_partition_key(s, hk, dk).then([name = std::move(name), &filenames] (bool contains) mutable {
                 std::cout << "get_sstable_by_key " << contains << std::endl;
                 if (contains) {
                     filenames.insert(name);
@@ -1587,7 +1587,7 @@ future<std::set<sstring>> column_family::get_sstables_by_key(const sstring& key)
         }).then([&filenames] {
             return make_ready_future<std::set<sstring>>(filenames);
         });
-        std::cout << "done do_for_each"<< engine().cpu_id() <<  std::endl;
+
     });
 }
 

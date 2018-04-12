@@ -65,7 +65,7 @@ partition_key partition_key::from_string(const schema_ptr s, const sstring& key)
     boost::split(vec, key, boost::is_any_of(":"));
 
     if (vec.size() == 1) {
-        //return partition_key::from_single_value(*s, (*s->partition_key_type()->types().begin())->from_string(key));
+        return partition_key::from_single_value(*s, (*s->partition_key_type()->types().begin())->from_string(key));
     }
     //s->partition_key_type()->types().begin()->from_string(key);
     auto it = std::begin(vec);

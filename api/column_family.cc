@@ -908,10 +908,12 @@ void set_column_family(http_context& ctx, routes& r) {
 
     cf::get_sstables_for_key.set(r, [&ctx](std::unique_ptr<request> req) {
         auto key = req->get_query_param("key");
-        return map_reduce_cf_raw(ctx, req->param["name"], std::set<sstring>(), [key](const column_family& cf) {
-           return cf.get_sstables_by_key(key);
-           // return std::vector<sstring>();
-        }, [](std::set<sstring> a, std::set<sstring>&& b) mutable {
+        auto uuid = get_uuid(req->param["name"], ctx.db.local());
+
+        return ctx.db.map_reduce0([key, uuid] (database& db) {
+            return db.find_column_family(uuid).get_sstables_by_key(key);
+        }, std::set<sstring>(),
+            [](std::set<sstring> a, std::set<sstring>&& b) mutable {
             a.insert(b.begin(),b.end());
             return a;
         }).then([](const std::set<sstring>& res) {

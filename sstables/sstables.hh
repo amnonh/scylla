@@ -684,7 +684,7 @@ public:
      * The caller needs to create and hold shared_index_lists for life of the method call,
      * it is used by the index reader.
      */
-    static future<bool> has_partition_key(shared_sstable s, const utils::hashed_key& hk, const dht::decorated_key& dk, shared_index_lists& index_lists);
+    static future<bool> has_partition_key(shared_sstable s, const utils::hashed_key& hk, const dht::decorated_key& dk);
 
     bool filter_has_key(utils::hashed_key key) {
         return _components->filter->is_present(key);

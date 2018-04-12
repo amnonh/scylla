@@ -3104,14 +3104,14 @@ sstable::compute_shards_for_this_sstable() const {
     return boost::copy_range<std::vector<unsigned>>(shards);
 }
 
-future<bool> sstable::has_partition_key(shared_sstable s, const utils::hashed_key& hk, const dht::decorated_key& dk, shared_index_lists& index_lists) {
+future<bool> sstable::has_partition_key(shared_sstable s, const utils::hashed_key& hk, const dht::decorated_key& dk) {
     if (!s->filter_has_key(hk)) {
         return make_ready_future<bool>(false);
     }
-    std::unique_ptr<sstables::index_reader> lh_index = std::make_unique<sstables::index_reader>(s, default_priority_class(), index_lists);
+    std::unique_ptr<sstables::index_reader> lh_index = std::make_unique<sstables::index_reader>(s, default_priority_class());
     std::cout << "has_partition_key "<< &dk._token << " " << (int)dk._token._kind << std::endl;
-    return lh_index->advance_and_check_if_present(dk).then([lh_index = std::move(lh_index), s] (bool present) {
-        std::cout << s->get_filename() <<" checking" << present << std::endl ;
+    return lh_index->advance_lower_and_check_if_present(dk).then([lh_index = std::move(lh_index), s] (bool present) {
+        std::cout << s->get_filename() <<" checking" << present << std::endl;
         return make_ready_future<bool>(present);
     });
 
