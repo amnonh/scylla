@@ -1,7 +1,3 @@
-[submodule "seastar"]
-	path = seastar
-	url = ../seastar
-	ignore = dirty
 [submodule "swagger-ui"]
 	path = swagger-ui
 	url = ../scylla-swagger-ui
@@ -12,3 +8,7 @@
 [submodule "libdeflate"]
 	path = libdeflate
 	url = ../libdeflate
+[submodule "seastar"]
+	path = seastar
+	url = git@github.com:amnonh/seastar.git
+	branch = amnon/metrics_error_with_labels
