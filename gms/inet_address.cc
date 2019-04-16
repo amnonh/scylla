@@ -40,6 +40,8 @@
 #include <seastar/core/print.hh>
 #include <seastar/core/future.hh>
 #include "inet_address.hh"
+#include <sys/types.h>
+#include <ifaddrs.h>
 
 using namespace seastar;
 
@@ -51,4 +53,48 @@ future<gms::inet_address> gms::inet_address::lookup(sstring name) {
     return seastar::net::inet_address::find(name, seastar::net::inet_address::family::INET).then([](seastar::net::inet_address&& a) {
         return make_ready_future<gms::inet_address>(a);
     });
+}
+
+future<gms::inet_address> gms::inet_address::iflookup(sstring interface) {
+    struct ifaddrs *ifaddr, *ifa;
+    uint32_t from_ip = 0;
+    uint32_t to_ip = 0;
+    gms::inet_address ad;
+    auto slash_position = interface.find('/');
+
+    if (slash_position != sstring::npos) {
+        // for the ip/mask notation we are going to calculate the ip range
+        // if the interface ip address is in that range, we will return it
+        gms::inet_address net_address(interface.substr(0, slash_position));
+        uint32_t ip = net_address.addr().ip;
+        uint32_t mask_len = std::stoul(interface.substr(slash_position + 1));
+        uint64_t mask = 0xffffffff & (0xffffffff << mask_len);
+        from_ip = ip & mask;
+        to_ip = from_ip + (1 << mask_len);
+    }
+    if (getifaddrs(&ifaddr) == -1) {
+        throw std::runtime_error("Failed getting interface information");
+    }
+
+    for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
+        if (ifa->ifa_addr == NULL || ifa->ifa_addr->sa_family == AF_PACKET) {
+            continue;
+        }
+        ad = gms::inet_address(0);
+        if (ifa->ifa_addr->sa_family == AF_INET) {
+            struct sockaddr_in* sa = reinterpret_cast<sockaddr_in*>(ifa->ifa_addr);
+            ad = gms::inet_address(sa->sin_addr);
+        }
+        if (interface == ifa->ifa_name ||
+                (to_ip !=0 && ad.addr().ip >= from_ip && ad.addr().ip <= to_ip) ) {
+            if (ifa->ifa_addr->sa_family != AF_INET) {
+                freeifaddrs(ifaddr);
+                throw std::runtime_error(sstring("Interface lookup for '" + interface + "' Failed. Only IPv4 interfaces are supported"));
+            }
+            freeifaddrs(ifaddr);
+            return make_ready_future<gms::inet_address>(ad);
+        }
+    }
+    freeifaddrs(ifaddr);
+    throw std::runtime_error("Failed getting interface '" + interface + "' information");
 }

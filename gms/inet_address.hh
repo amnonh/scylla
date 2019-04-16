@@ -95,6 +95,16 @@ public:
     friend struct std::hash<inet_address>;
 
     static future<inet_address> lookup(sstring);
+
+    /*!
+     * \brief find an IP address based on an interface name or ip range.
+     *
+     * name - either the interface name (ie. lo) or an IP range in
+     * the format of ip/mask (For example: 10.0.0.0/8).
+     *
+     * iflookup will throw an exception if unable to get an inet_address.
+     */
+    static future<inet_address> iflookup(sstring name);
 };
 
 std::ostream& operator<<(std::ostream& os, const inet_address& x);
