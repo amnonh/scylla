@@ -410,7 +410,9 @@ int main(int ac, char** av) {
             uint16_t api_port = cfg->api_port();
             ctx.api_dir = cfg->api_ui_dir();
             ctx.api_doc = cfg->api_doc_dir();
-            sstring listen_address = cfg->listen_address();
+            sstring listen_address = (cfg->listen_interface().empty()) ? cfg->listen_address() :
+                    gms::inet_address::iflookup(cfg->listen_interface()).get0().to_sstring();
+
             sstring rpc_address = cfg->rpc_address();
             sstring api_address = cfg->api_address() != "" ? cfg->api_address() : rpc_address;
             sstring broadcast_address = cfg->broadcast_address();

@@ -141,7 +141,7 @@ public:
             "If Scylla can't find the correct address, you must specify the IP address or host name.\n"  \
             "Never specify 0.0.0.0; it is always wrong."  \
     )                                                   \
-    val(listen_interface, sstring, "eth0", Unused,  \
+    val(listen_interface, sstring, "", Used,  \
             "The interface that Scylla binds to for connecting to other Scylla nodes. Interfaces must correspond to a single address, IP aliasing is not supported. See listen_address."  \
     )   \
     /* Default directories */   \
