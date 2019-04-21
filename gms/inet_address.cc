@@ -56,10 +56,8 @@ future<gms::inet_address> gms::inet_address::lookup(sstring name) {
 }
 
 future<gms::inet_address> gms::inet_address::iflookup(sstring interface) {
-    struct ifaddrs *ifaddr, *ifa;
     uint32_t from_ip = 0;
     uint32_t to_ip = 0;
-    gms::inet_address ad;
     auto slash_position = interface.find('/');
 
     if (slash_position != sstring::npos) {
@@ -72,29 +70,13 @@ future<gms::inet_address> gms::inet_address::iflookup(sstring interface) {
         from_ip = ip & mask;
         to_ip = from_ip + (1 << mask_len);
     }
-    if (getifaddrs(&ifaddr) == -1) {
-        throw std::runtime_error("Failed getting interface information");
-    }
-
-    for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
-        if (ifa->ifa_addr == NULL || ifa->ifa_addr->sa_family == AF_PACKET) {
-            continue;
-        }
-        ad = gms::inet_address(0);
-        if (ifa->ifa_addr->sa_family == AF_INET) {
-            struct sockaddr_in* sa = reinterpret_cast<sockaddr_in*>(ifa->ifa_addr);
-            ad = gms::inet_address(sa->sin_addr);
-        }
-        if (interface == ifa->ifa_name ||
-                (to_ip !=0 && ad.addr().ip >= from_ip && ad.addr().ip <= to_ip) ) {
-            if (ifa->ifa_addr->sa_family != AF_INET) {
-                freeifaddrs(ifaddr);
-                throw std::runtime_error(sstring("Interface lookup for '" + interface + "' Failed. Only IPv4 interfaces are supported"));
-            }
-            freeifaddrs(ifaddr);
-            return make_ready_future<gms::inet_address>(ad);
+    auto interfaces = engine().net().get_interfaces();
+    for (auto i : interfaces) {
+        std::cout << "interface "<< i.name << std::endl;
+        if (interface == i.name ||
+                (to_ip != 0 && i.host_address.ip >= from_ip && i.host_address.ip <= to_ip) ) {
+            return make_ready_future<gms::inet_address>(i.host_address.ip);
         }
     }
-    freeifaddrs(ifaddr);
     throw std::runtime_error("Failed getting interface '" + interface + "' information");
 }
