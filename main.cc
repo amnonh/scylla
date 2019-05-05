@@ -413,7 +413,8 @@ int main(int ac, char** av) {
             sstring listen_address = (cfg->listen_interface().empty()) ? cfg->listen_address() :
                     gms::inet_address::iflookup(cfg->listen_interface()).get0().to_sstring();
 
-            sstring rpc_address = cfg->rpc_address();
+            sstring rpc_address = (cfg->rpc_interface().empty())? cfg->rpc_address() :
+                gms::inet_address::iflookup(cfg->rpc_interface()).get0().to_sstring();
             sstring api_address = cfg->api_address() != "" ? cfg->api_address() : rpc_address;
             sstring broadcast_address = cfg->broadcast_address();
             sstring broadcast_rpc_address = cfg->broadcast_rpc_address();

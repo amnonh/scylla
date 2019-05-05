@@ -208,7 +208,7 @@ public:
             "\thostname\n"  \
             "Related information: Network\n"    \
     )                                                   \
-    val(rpc_interface, sstring, "eth1", Unused,     \
+    val(rpc_interface, sstring, "", Used,     \
             "The listen address for client connections. Interfaces must correspond to a single address, IP aliasing is not supported. See rpc_address." \
     )   \
     val(seed_provider, seed_provider_type, seed_provider_type("org.apache.cassandra.locator.SimpleSeedProvider"), Used, \
