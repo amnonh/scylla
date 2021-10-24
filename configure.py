@@ -569,6 +569,7 @@ raft_tests = set([
 apps = set([
     'scylla',
     'test/tools/cql_repl',
+    'test/tools/s3',
     'tools/scylla-types',
     'tools/scylla-sstable',
 ])
@@ -1145,6 +1146,7 @@ scylla_raft_dependencies = scylla_raft_core + ['utils/uuid.cc']
 deps = {
     'scylla': idls + ['main.cc', 'release.cc', 'utils/build_id.cc'] + scylla_core + api + alternator + redis,
     'test/tools/cql_repl': idls + ['test/tools/cql_repl.cc'] + scylla_core + scylla_tests_generic_dependencies,
+    'test/tools/s3': idls + ['test/tools/s3.cc', 'test/tools/s3_file_server.cc'] + scylla_core + scylla_tests_generic_dependencies,
     #FIXME: we don't need all of scylla_core here, only the types module, need to modularize scylla_core.
     'tools/scylla-types': idls + ['tools/scylla-types.cc'] + scylla_core,
     'tools/scylla-sstable': idls + ['tools/scylla-sstable.cc', 'tools/schema_loader.cc'] + scylla_core,
@@ -1941,7 +1943,7 @@ with open(buildfile_tmp, 'w') as f:
         )
 
         f.write(
-            'build {mode}-test: test.{mode} {test_executables} $builddir/{mode}/test/tools/cql_repl $builddir/{mode}/scylla\n'.format(
+            'build {mode}-test: test.{mode} {test_executables} $builddir/{mode}/test/tools/cql_repl $builddir/{mode}/test/tools/s3  $builddir/{mode}/scylla\n'.format(
                 mode=mode,
                 test_executables=' '.join(['$builddir/{}/{}'.format(mode, binary) for binary in tests]),
             )
