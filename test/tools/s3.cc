@@ -98,6 +98,9 @@ int main(int argc, char* argv[]) {
     app_cfg.default_task_quota = 500us;
     app_cfg.auto_handle_sigint_sigterm = false;
     seastar::app_template app(std::move(app_cfg));
+    app.add_options()
+                ("port", bpo::value<uint>(), "port to listen to")
+                ("address", bpo::value<sstring>(), "ip address to listen to");
     app.add_positional_options({
         {"basedir", bpo::value<std::vector<sstring>>(), "the base directory to server files from", 1},
     });
@@ -109,6 +112,12 @@ int main(int argc, char* argv[]) {
         if (!app.configuration().contains("basedir")) {
             s3log.info("Base directory is missing!");
             return make_ready_future<int>(-1);
+        }
+        if (app.configuration().contains("address")) {
+            api_address = app.configuration()["address"].as<sstring>();
+        }
+        if (app.configuration().contains("port")) {
+            api_port = app.configuration()["port"].as<uint>();
         }
         ctx.base_dir = app.configuration()["basedir"].as<std::vector<sstring>>()[0];
         s3log.info("serving files from: {}", ctx.base_dir);
